@@ -25,7 +25,7 @@ public class JavaPluginLoader implements PluginLoader {
 	public JavaPluginLoader(@NotNull Map<PluginType, PluginLoader> pluginTypeLoaders) {
 		this.pluginTypeLoaders = pluginTypeLoaders;
 
-		if(this.pluginTypeLoaders.isEmpty()) { // Add default values if none specified.
+		if (this.pluginTypeLoaders.isEmpty()) { // Add default values if none specified.
 			putPluginTypeLoader(PluginType.PLATFORM, new PlatformPluginLoader(this));
 			// More will follow
 		}
@@ -36,7 +36,7 @@ public class JavaPluginLoader implements PluginLoader {
 	}
 
 	@Override
-	public Plugin load(@NotNull File targetFile) throws IOException, PluginLoadException {
+	public Plugin load(@NotNull File targetFile) throws PluginLoadException {
 		try (JarFile jarFile = new JarFile(targetFile)) {
 			JarEntry pluginConfigEntry = jarFile.getJarEntry("meta.json");
 			if (pluginConfigEntry == null)
@@ -45,9 +45,9 @@ public class JavaPluginLoader implements PluginLoader {
 
 			try (InputStream pluginConfigStream = jarFile.getInputStream(pluginConfigEntry)) {
 				JSONObject pluginConfig = new JSONObject(IOUtils.toString(pluginConfigStream, "UTF-8"));
-				if(pluginConfig.length() == 0)
+				if (pluginConfig.length() == 0)
 					throw new NullPointerException("Plugin " + targetFile.getAbsolutePath() + " not supported.");
-				if(!pluginConfig.has("plugin"))
+				if (!pluginConfig.has("plugin"))
 					throw new NullPointerException("Plugin " + targetFile.getAbsolutePath() + " not supported.");
 				pluginConfig = pluginConfig.getJSONObject("plugin");
 				PluginType pluginType = PluginType.find(pluginConfig.optString("type")); // optional, because it will be checked later
@@ -58,19 +58,28 @@ public class JavaPluginLoader implements PluginLoader {
 				jarFile.close();
 				return pluginTypeLoaders.get(pluginType).load(targetFile);
 			}
+		} catch (PluginLoadException e) {
+			throw e; // Avoid nesting
 		} catch (Exception e) {
-			if (e instanceof PluginLoadException) // Avoid nesting
-				throw e;
-
 			throw new PluginLoadException(e);
 		}
 	}
 
 	@Override
-	public boolean unload(@NotNull Plugin targetPlugin) {
-		return pluginTypeLoaders.get(targetPlugin.getPluginInfo().getPluginType()).unload(targetPlugin);
+	public boolean unload(@NotNull Plugin targetPlugin) throws PluginUnloadException {
+		try {
+			if(!isLoaded(targetPlugin))
+				throw new PluginUnloadException("Plugin not loaded.");
+				PluginType type = targetPlugin.getPluginInfo().getPluginType();
+			if (!pluginTypeLoaders.containsKey(type))
+				throw new PluginNotSupportedException("Plugin with type " + type.name() + " cannot be unloaded by loader.");
+			return pluginTypeLoaders.get(type).unload(targetPlugin);
+		} catch (PluginUnloadException e) {
+			throw e; // Avoid nesting
+		} catch (Exception e) {
+			throw new PluginUnloadException(e);
+		}
 	}
-
 
 	public List<Plugin> getPlugins() {
 		return plugins;

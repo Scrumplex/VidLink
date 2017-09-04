@@ -2,7 +2,6 @@ package net.scrumplex.vidlink.core.plugins.java.platforms;
 
 import net.scrumplex.vidlink.core.plugins.Plugin;
 import net.scrumplex.vidlink.core.plugins.PluginLoadException;
-import net.scrumplex.vidlink.core.plugins.java.JavaPluginLoader;
 import net.scrumplex.vidlink.core.plugins.PluginLoader;
 import net.scrumplex.vidlink.core.plugins.PluginType;
 import org.apache.commons.io.IOUtils;
@@ -35,9 +34,9 @@ public class PlatformPluginLoader implements PluginLoader {
 
 			try (InputStream pluginConfigStream = jarFile.getInputStream(pluginConfigEntry)) {
 				JSONObject pluginConfig = new JSONObject(IOUtils.toString(pluginConfigStream, "UTF-8"));
-				if(pluginConfig.length() == 0)
+				if (pluginConfig.length() == 0)
 					throw new NullPointerException("Plugin " + targetFile.getAbsolutePath() + " not supported.");
-				if(!pluginConfig.has("plugin"))
+				if (!pluginConfig.has("plugin"))
 					throw new NullPointerException("Plugin " + targetFile.getAbsolutePath() + " not supported.");
 				pluginConfig = pluginConfig.getJSONObject("plugin");
 				PluginType pluginType = PluginType.find(pluginConfig.optString("type")); // optional, because it will be checked later
@@ -66,7 +65,16 @@ public class PlatformPluginLoader implements PluginLoader {
 	}
 
 	@Override
-	public boolean unload(@NotNull Plugin targetPlugin) {
+	public boolean unload(@NotNull Plugin targetPlugin) throws IOException {
+		if (targetPlugin instanceof PlatformPlugin && plugins.contains(targetPlugin)) {
+			PlatformPlugin plugin = (PlatformPlugin) targetPlugin;
+			plugin.unload();
+			plugins.remove(targetPlugin);
+			PlatformPluginClassLoader pluginClassLoader = classloaders.remove(plugin);
+			pluginClassLoader.disable();
+			return true;
+
+		}
 		return false;
 	}
 

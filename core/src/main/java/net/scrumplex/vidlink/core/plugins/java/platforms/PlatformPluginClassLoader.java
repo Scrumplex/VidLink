@@ -58,7 +58,7 @@ public class PlatformPluginClassLoader extends URLClassLoader {
 		return clazz;
 	}
 
-	void unload() throws IOException {
+	void disable() throws IOException {
 		this.disabled = true;
 		this.close();
 	}

@@ -34,6 +34,6 @@ public class JavaPlugin implements Plugin {
 
 	@Override
 	public PluginInfo getPluginInfo() {
-		return null;
+		return info;
 	}
 }

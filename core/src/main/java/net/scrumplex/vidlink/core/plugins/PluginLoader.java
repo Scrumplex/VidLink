@@ -13,6 +13,6 @@ public interface PluginLoader {
 
 	Plugin load(@NotNull File targetFile) throws IOException, PluginLoadException;
 
-	boolean unload(@NotNull Plugin targetPlugin);
+	boolean unload(@NotNull Plugin targetPlugin) throws IOException, PluginUnloadException;
 
 }
