@@ -2,19 +2,20 @@ package net.scrumplex.vidlink.core.plugins.java;
 
 import net.scrumplex.vidlink.core.plugins.*;
 import net.scrumplex.vidlink.core.plugins.java.platforms.PlatformPluginLoader;
+import org.apache.commons.io.IOUtils;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.*;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
 public class JavaPluginLoader implements PluginLoader {
 
-	protected final List<JavaPlugin> plugins = new ArrayList<>();
 	private Map<PluginType, PluginLoader> pluginTypeLoaders;
 
 	public JavaPluginLoader() {
@@ -22,8 +23,6 @@ public class JavaPluginLoader implements PluginLoader {
 	}
 
 	public JavaPluginLoader(@NotNull Map<PluginType, PluginLoader> pluginTypeLoaders) {
-		super();
-
 		this.pluginTypeLoaders = pluginTypeLoaders;
 
 		if(this.pluginTypeLoaders.isEmpty()) { // Add default values if none specified.
@@ -45,8 +44,13 @@ public class JavaPluginLoader implements PluginLoader {
 
 
 			try (InputStream pluginConfigStream = jarFile.getInputStream(pluginConfigEntry)) {
-				JSONObject pluginConfig = new JSONObject(pluginConfigStream);
-				PluginType pluginType = PluginType.find(pluginConfig.optString("plugin.type")); // optional, because it will be checked later
+				JSONObject pluginConfig = new JSONObject(IOUtils.toString(pluginConfigStream, "UTF-8"));
+				if(pluginConfig.length() == 0)
+					throw new NullPointerException("Plugin " + targetFile.getAbsolutePath() + " not supported.");
+				if(!pluginConfig.has("plugin"))
+					throw new NullPointerException("Plugin " + targetFile.getAbsolutePath() + " not supported.");
+				pluginConfig = pluginConfig.getJSONObject("plugin");
+				PluginType pluginType = PluginType.find(pluginConfig.optString("type")); // optional, because it will be checked later
 				if (pluginType == null || !pluginTypeLoaders.containsKey(pluginType))
 					throw new NullPointerException("Plugin " + targetFile.getAbsolutePath() + " not supported.");
 
@@ -68,11 +72,11 @@ public class JavaPluginLoader implements PluginLoader {
 	}
 
 
-	public List<JavaPlugin> getPlugins() {
+	public List<Plugin> getPlugins() {
 		return plugins;
 	}
 
-	public boolean isLoaded(JavaPlugin plugin) {
+	public boolean isLoaded(Plugin plugin) {
 		return plugins.contains(plugin);
 	}
 }
